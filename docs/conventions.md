@@ -29,9 +29,9 @@ This document outlines the key operational and structural conventions for the `w
 
 ## 3. API Interaction
 
-- **Input Structure:** API calls to the `/run` or `/runsync` endpoints must adhere to the JSON structure specified in the `README.md` ("API specification"). The primary key is `input`, containing `workflow` (mandatory object) and `images` (optional array).
+- **Input Structure:** API calls to the `/run` or `/runsync` endpoints must adhere to the JSON structure specified in the `README.md` ("API specification"). The primary key is `input`, containing a workflow definition (`workflow`, `workflow_url`, or `workflow_id`) and optional `images`.
 - **Image Encoding:** Input images provided in the `input.images` array must be base64 encoded strings (optionally including a `data:[<mediatype>];base64,` prefix).
-- **Workflow Format:** The `input.workflow` object should contain the JSON exported from ComfyUI using the "Save (API Format)" option (requires enabling "Dev mode Options" in ComfyUI settings).
+- **Workflow Format:** When providing `input.workflow` directly, use the JSON exported from ComfyUI via "Save (API Format)". When using `workflow_url` or `workflow_id`, the handler will resolve the JSON on your behalf.
 - **Output Structure:** Successful responses contain an `output.images` field, which is a **list of dictionaries**. Each dictionary includes `filename` (string), `type` (`"s3_url"` or `"base64"`), and `data` (string containing the URL or base64 data). Refer to the `README.md` API examples for the exact structure.
 - **Internal Communication:** Job status monitoring uses the ComfyUI websocket API instead of HTTP polling for efficiency.
 

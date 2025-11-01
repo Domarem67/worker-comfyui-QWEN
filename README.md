@@ -180,6 +180,11 @@ To get the correct `workflow` JSON for the API:
 2.  In the top navigation, select `Workflow > Export (API)`
 3.  A `workflow.json` file will be downloaded. Use the content of this file as the value for the `input.workflow` field in your API requests.
 
+Alternatively, the handler understands two convenience fields:
+
+- `workflow_id`: load a predefined template baked into the image (e.g. `qwen_image_edit` uses the ComfyUI-native Qwen Image Edit 2509 workflow).
+- `workflow_url`: fetch a workflow JSON from an external URL (must return the API export format).
+
 ## Further Documentation
 
 - **[Deployment Guide](docs/deployment.md):** Detailed steps for deploying on RunPod.

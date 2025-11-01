@@ -13,6 +13,7 @@ import uuid
 import tempfile
 import socket
 import traceback
+from pathlib import Path
 
 # Time to wait between API check attempts in milliseconds
 COMFY_API_AVAILABLE_INTERVAL_MS = 50
@@ -38,6 +39,87 @@ COMFY_HOST = "127.0.0.1:8188"
 # Enforce a clean state after each job is done
 # see https://docs.runpod.io/docs/handler-additional-controls#refresh-worker
 REFRESH_WORKER = os.environ.get("REFRESH_WORKER", "false").lower() == "true"
+
+THIS_DIR = Path(__file__).resolve().parent
+WORKFLOW_SEARCH_PATHS = [
+    THIS_DIR / "test_resources" / "workflows",
+    Path("/test_resources/workflows"),
+]
+WORKFLOW_LIBRARY = {
+    "qwen_image_edit": "workflow_qwen_image_edit.json",
+}
+
+# ---------------------------------------------------------------------------
+# Workflow loading helpers
+# ---------------------------------------------------------------------------
+
+
+def _load_workflow_from_file(path: Path):
+    """Load workflow JSON from file path and normalize structure."""
+    try:
+        with path.open("r", encoding="utf-8") as fp:
+            data = json.load(fp)
+    except FileNotFoundError:
+        raise ValueError(f"Workflow file not found: {path}") from None
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Workflow file is not valid JSON: {path}") from exc
+    except Exception as exc:
+        raise ValueError(f"Unexpected error loading workflow file: {exc}") from exc
+
+    if isinstance(data, dict):
+        if "input" in data and isinstance(data["input"], dict):
+            workflow_data = data["input"].get("workflow")
+            if workflow_data:
+                return workflow_data
+        if "workflow" in data and isinstance(data["workflow"], dict):
+            return data["workflow"]
+    if isinstance(data, dict):
+        return data
+    raise ValueError(f"Workflow file {path} does not contain a valid workflow structure.")
+
+
+def load_workflow_from_library(workflow_id: str):
+    """Resolve a workflow embedded in the container image or repository."""
+    filename = WORKFLOW_LIBRARY.get(workflow_id)
+    if not filename:
+        raise ValueError(f"Unknown workflow_id '{workflow_id}'. Available: {', '.join(WORKFLOW_LIBRARY)}")
+
+    for search_path in WORKFLOW_SEARCH_PATHS:
+        candidate = search_path / filename
+        if candidate.exists():
+            return _load_workflow_from_file(candidate)
+
+    raise ValueError(
+        f"Workflow file '{filename}' for workflow_id '{workflow_id}' not found in search paths: "
+        + ", ".join(str(p) for p in WORKFLOW_SEARCH_PATHS)
+    )
+
+
+def load_workflow_from_url(workflow_url: str):
+    """Fetch workflow JSON from a remote URL."""
+    try:
+        response = requests.get(workflow_url, timeout=15)
+        response.raise_for_status()
+    except requests.Timeout as exc:
+        raise ValueError(f"Timeout fetching workflow from URL: {workflow_url}") from exc
+    except requests.RequestException as exc:
+        raise ValueError(f"Error fetching workflow from URL '{workflow_url}': {exc}") from exc
+
+    try:
+        data = response.json()
+    except ValueError as exc:
+        raise ValueError(f"Workflow URL did not return valid JSON: {workflow_url}") from exc
+
+    if isinstance(data, dict):
+        if "input" in data and isinstance(data["input"], dict) and "workflow" in data["input"]:
+            return data["input"]["workflow"]
+        if "workflow" in data and isinstance(data["workflow"], dict):
+            return data["workflow"]
+    if isinstance(data, dict):
+        return data
+
+    raise ValueError(f"Workflow content at {workflow_url} is not in the expected format.")
+
 
 # ---------------------------------------------------------------------------
 # Helper: quick reachability probe of ComfyUI HTTP endpoint (port 8188)
@@ -149,10 +231,22 @@ def validate_input(job_input):
         except json.JSONDecodeError:
             return None, "Invalid JSON format in input"
 
-    # Validate 'workflow' in input
+    # Validate workflow sourcing (direct object, URL, or library id)
     workflow = job_input.get("workflow")
-    if workflow is None:
-        return None, "Missing 'workflow' parameter"
+    workflow_url = job_input.get("workflow_url")
+    workflow_id = job_input.get("workflow_id")
+
+    if workflow is None and not workflow_url and not workflow_id:
+        return None, "Missing 'workflow' parameter (provide 'workflow', 'workflow_url', or 'workflow_id')"
+
+    if isinstance(workflow, str):
+        try:
+            workflow = json.loads(workflow)
+        except json.JSONDecodeError:
+            return None, "Workflow provided as string is not valid JSON"
+
+    if workflow is not None and not isinstance(workflow, dict):
+        return None, "'workflow' must be a JSON object exported with \"Save (API Format)\" in ComfyUI"
 
     # Validate 'images' in input, if provided
     images = job_input.get("images")
@@ -171,6 +265,8 @@ def validate_input(job_input):
     # Return validated data and no error
     return {
         "workflow": workflow,
+        "workflow_url": workflow_url,
+        "workflow_id": workflow_id,
         "images": images,
         "comfy_org_api_key": comfy_org_api_key,
     }, None
@@ -512,7 +608,26 @@ def handler(job):
 
     # Extract validated data
     workflow = validated_data["workflow"]
+    workflow_url = validated_data.get("workflow_url")
+    workflow_id = validated_data.get("workflow_id")
     input_images = validated_data.get("images")
+
+    if workflow is None and workflow_url:
+        try:
+            workflow = load_workflow_from_url(workflow_url)
+            print(f"worker-comfyui - Loaded workflow from URL {workflow_url}")
+        except ValueError as exc:
+            return {"error": str(exc)}
+
+    if workflow is None and workflow_id:
+        try:
+            workflow = load_workflow_from_library(workflow_id)
+            print(f"worker-comfyui - Loaded workflow from library id '{workflow_id}'")
+        except ValueError as exc:
+            return {"error": str(exc)}
+
+    if workflow is None:
+        return {"error": "Unable to resolve workflow definition from input"}
 
     # Make sure that the ComfyUI HTTP API is available before proceeding
     if not check_server(
