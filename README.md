@@ -40,6 +40,7 @@ These images are available on Docker Hub under `runpod/worker-comfyui`:
 - **`runpod/worker-comfyui:<version>-flux1-dev`**: Includes checkpoint, text encoders, and VAE for [FLUX.1 dev](https://huggingface.co/black-forest-labs/FLUX.1-dev).
 - **`runpod/worker-comfyui:<version>-sdxl`**: Includes checkpoint and VAEs for [Stable Diffusion XL](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0).
 - **`runpod/worker-comfyui:<version>-sd3`**: Includes checkpoint for [Stable Diffusion 3 medium](https://huggingface.co/stabilityai/stable-diffusion-3-medium).
+- **`runpod/worker-comfyui:<version>-qwen-image-edit-2509`**: Packages the [Qwen Image Edit 2509](https://huggingface.co/Qwen/Qwen-Image-Edit-2509) diffusion model (ComfyUI build) plus required text encoder, VAE, and Lightning LoRA.
 
 Replace `<version>` with the current release tag, check the [releases page](https://github.com/runpod-workers/worker-comfyui/releases) for the latest version.
 

@@ -102,7 +102,8 @@ ARG MODEL_TYPE=flux1-dev-fp8
 WORKDIR /comfyui
 
 # Create necessary directories upfront
-RUN mkdir -p models/checkpoints models/vae models/unet models/clip
+RUN mkdir -p models/checkpoints models/vae models/unet models/clip \
+    models/diffusion_models models/text_encoders models/loras
 
 # Download checkpoints/vae/unet/clip models to include in image based on model type
 RUN if [ "$MODEL_TYPE" = "sdxl" ]; then \
@@ -131,6 +132,13 @@ RUN if [ "$MODEL_TYPE" = "flux1-dev" ]; then \
 
 RUN if [ "$MODEL_TYPE" = "flux1-dev-fp8" ]; then \
       wget -q -O models/checkpoints/flux1-dev-fp8.safetensors https://huggingface.co/Comfy-Org/flux1-dev/resolve/main/flux1-dev-fp8.safetensors; \
+    fi
+
+RUN if [ "$MODEL_TYPE" = "qwen-image-edit-2509" ]; then \
+      wget -q -O models/diffusion_models/qwen_image_edit_2509_fp8_e4m3fn.safetensors https://huggingface.co/Comfy-Org/Qwen-Image-Edit_ComfyUI/resolve/main/split_files/diffusion_models/qwen_image_edit_2509_fp8_e4m3fn.safetensors && \
+      wget -q -O models/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors && \
+      wget -q -O models/vae/qwen_image_vae.safetensors https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/vae/qwen_image_vae.safetensors && \
+      wget -q -O models/loras/Qwen-Image-Edit-Lightning-4steps-V1.0.safetensors https://huggingface.co/lightx2v/Qwen-Image-Lightning/resolve/main/Qwen-Image-Edit-Lightning-4steps-V1.0.safetensors; \
     fi
 
 # Stage 3: Final image

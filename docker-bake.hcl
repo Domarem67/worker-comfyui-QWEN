@@ -36,7 +36,7 @@ variable "HUGGINGFACE_ACCESS_TOKEN" {
 }
 
 group "default" {
-  targets = ["base", "sdxl", "sd3", "flux1-schnell", "flux1-dev", "flux1-dev-fp8", "base-cuda12-8-1"]
+  targets = ["base", "sdxl", "sd3", "flux1-schnell", "flux1-dev", "flux1-dev-fp8", "qwen-image-edit-2509", "base-cuda12-8-1"]
 }
 
 target "base" {
@@ -138,6 +138,22 @@ target "flux1-dev-fp8" {
   inherits = ["base"]
 }
 
+target "qwen-image-edit-2509" {
+  context = "."
+  dockerfile = "Dockerfile"
+  target = "final"
+  args = {
+    BASE_IMAGE = "${BASE_IMAGE}"
+    COMFYUI_VERSION = "${COMFYUI_VERSION}"
+    CUDA_VERSION_FOR_COMFY = "${CUDA_VERSION_FOR_COMFY}"
+    ENABLE_PYTORCH_UPGRADE = "${ENABLE_PYTORCH_UPGRADE}"
+    PYTORCH_INDEX_URL = "${PYTORCH_INDEX_URL}"
+    MODEL_TYPE = "qwen-image-edit-2509"
+  }
+  tags = ["${DOCKERHUB_REPO}/${DOCKERHUB_IMG}:${RELEASE_VERSION}-qwen-image-edit-2509"]
+  inherits = ["base"]
+}
+
 target "base-cuda12-8-1" {
   context = "."
   dockerfile = "Dockerfile"
@@ -153,4 +169,3 @@ target "base-cuda12-8-1" {
   }
   tags = ["${DOCKERHUB_REPO}/${DOCKERHUB_IMG}:${RELEASE_VERSION}-base-cuda12.8.1"]
 }
-

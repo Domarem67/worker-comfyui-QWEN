@@ -45,6 +45,7 @@ This is the simplest method if the official images meet your needs.
 | Stable Diffusion 3 Medium | `sd3`            | 5 GB                  | 20 GB                      |
 | FLUX.1 Schnell            | `flux1-schnell`  | 24 GB                 | 30 GB                      |
 | FLUX.1 dev                | `flux1-dev`      | 24 GB                 | 30 GB                      |
+| Qwen Image Edit 2509      | `qwen-image-edit-2509` | 24 GB (fp8)         | 40 GB                      |
 | Base (No models)          | `base`           | N/A                   | 5 GB                       |
 
 _Note: Container sizes are approximate and might vary slightly. Custom images will vary based on included models/nodes._
